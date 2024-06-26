@@ -15,6 +15,7 @@ additionalApiServerCertSans: &sans
   - "192.168.202.10"
   - 127.0.0.1 # KubePrism
   - "k8s.nmoura.pt"
+  - "talos.nmoura.pt"
 additionalMachineCertSans: *sans
 
 # Disable built-in Flannel to use Cilium
