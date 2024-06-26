@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/budimanjojo/talhelper/master/pkg/config/schemas/talconfig.json
+---
+# renovate: datasource=docker depName=ghcr.io/siderolabs/installer
+talosVersion: v1.7.5
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.30.2
+
+clusterName: "hometalos"
+endpoint: https://192.168.202.10:6443
+clusterPodNets:
+  - "10.69.0.0/16"
+clusterSvcNets:
+  - "10.96.0.0/16"
+additionalApiServerCertSans: &sans
+  - "192.168.202.10"
+  - 127.0.0.1 # KubePrism
+  - "k8s.nmoura.pt"
+additionalMachineCertSans: *sans
+
+# Disable built-in Flannel to use Cilium
+cniConfig:
+  name: none
+
+nodes:
+  - hostname: "talos1"
+    ipAddress: "192.168.202.11"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/613e1592b2da41ae5e265e8789429f22e121aab91cb4deb6bc3c0b6262961245
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "e8:ff:1e:d1:cf:47"
+        dhcp: false
+        addresses:
+          - "192.168.202.11/24"
+        routes:
+          - network: 0.0.0.0/0
+            gateway: "192.168.202.254"
+        mtu: 1500
+        vip:
+          ip: "192.168.202.10"
+  - hostname: "talos2"
+    ipAddress: "192.168.202.12"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/613e1592b2da41ae5e265e8789429f22e121aab91cb4deb6bc3c0b6262961245
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "e8:ff:1e:d1:cf:1b"
+        dhcp: false
+        addresses:
+          - "192.168.202.12/24"
+        routes:
+          - network: 0.0.0.0/0
+            gateway: "192.168.202.254"
+        mtu: 1500
+        vip:
+          ip: "192.168.202.10"
+  - hostname: "talos3"
+    ipAddress: "192.168.202.13"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/613e1592b2da41ae5e265e8789429f22e121aab91cb4deb6bc3c0b6262961245
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "e8:ff:1e:d1:cf:43"
+        dhcp: false
+        addresses:
+          - "192.168.202.13/24"
+        routes:
+          - network: 0.0.0.0/0
+            gateway: "192.168.202.254"
+        mtu: 1500
+        vip:
+          ip: "192.168.202.10"
+
+# Global patches
+patches:
+  - # Force nameserver
+    |-
+    machine:
+      network:
+        nameservers:
+          - 1.1.1.1
+          - 8.8.8.8
+  - # Configure NTP
+    |-
+    machine:
+      time:
+        disabled: false
+        servers:
+          - 1.pool.ntp.org
+          - 2.pool.ntp.org
+          - 3.pool.ntp.org
+  - "@./patches/global/cluster-discovery.yaml"
+  - "@./patches/global/containerd.yaml"
+  - "@./patches/global/disable-search-domain.yaml"
+  - "@./patches/global/hostdns.yaml"
+  - "@./patches/global/kubelet.yaml"
+  - "@./patches/global/openebs-local.yaml"
+  - "@./patches/global/sysctl.yaml"
+
+# Controller patches
+controlPlane:
+  patches:
+    - "@./patches/controller/api-access.yaml"
+    - "@./patches/controller/cluster.yaml"
+    - "@./patches/controller/disable-admission-controller.yaml"
+    - "@./patches/controller/etcd.yaml"
+
